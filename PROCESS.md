@@ -12,6 +12,7 @@
 
 - When a user submits a request with the same `client_name` + `product_asin` as an **active** request (`Pending` or `In Progress`), the UI shows a warning banner with the existing request's status and creation date, and asks the user to confirm or cancel.
 - If the existing request is `Done`, the new submission goes through silently (re-reviews are legitimate).
+- **Case-insensitive matching**: The duplicate check uses `.ilike()` for `client_name` so "Acme Corp" and "acme corp" are treated as the same client. ASINs are always uppercased before storage, so `.eq()` is sufficient for those.
 - **Why this approach**: 
   - A hard database constraint (`UNIQUE`) is too aggressive — legitimate re-reviews happen after a product listing changes, or when a previous review was done months ago.
   - Silently allowing all duplicates creates waste — someone might not realize a colleague already submitted the same request.
