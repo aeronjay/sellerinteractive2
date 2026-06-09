@@ -1,22 +1,15 @@
 # PROCESS.md — Client Review Tracker
 
 ## How I Used AI / Claude Code
+Used Gemini 3.1 Pro to create a plan with the task and everything: 
+Prompt: Help me with planning this project, Do best practices, ask me before proceeding.
 
-- **Delegated**: Scaffold generation, boilerplate (Supabase client setup, type definitions), CSS styling, test cases, and documentation drafting. The AI handled the repetitive structural code so I could focus on architecture decisions and the interesting logic.
-- **Prompts that worked well**: Starting with a full plan before touching code. Giving the AI the complete task spec upfront and asking it to generate a structured implementation plan let me review the approach before any code was written.
-- **One moment the AI was wrong**: When generating the Supabase server client, the AI initially used a synchronous `createClient()` pattern without `await`. Since `cookies()` in Next.js 15+ is async (returns a `Promise`), and the `@supabase/ssr` server client depends on it, I had to ensure `createClient()` in `lib/supabase/server.ts` is `async` and callers `await` it. This is the same class of bug present in the debug snippet — easy to miss if you're used to older Next.js patterns.
+From there I started implementing each step of the plan and asked Gemini to check my work and help with debugging.
+
 
 ## Duplicate Handling Decision
+ - Should be able to proceed with creating a review request even if there is a duplicate. But should display a warning message and confirmation.
 
-**Strategy: Warn but allow, with a confirmation step.**
-
-- When a user submits a request with the same `client_name` + `product_asin` as an **active** request (`Pending` or `In Progress`), the UI shows a warning banner with the existing request's status and creation date, and asks the user to confirm or cancel.
-- If the existing request is `Done`, the new submission goes through silently (re-reviews are legitimate).
-- **Case-insensitive matching**: The duplicate check uses `.ilike()` for `client_name` so "Acme Corp" and "acme corp" are treated as the same client. ASINs are always uppercased before storage, so `.eq()` is sufficient for those.
-- **Why this approach**: 
-  - A hard database constraint (`UNIQUE`) is too aggressive — legitimate re-reviews happen after a product listing changes, or when a previous review was done months ago.
-  - Silently allowing all duplicates creates waste — someone might not realize a colleague already submitted the same request.
-  - The warn-but-allow approach gives the user full context to make an informed decision. It respects their judgment while preventing accidental duplicates.
 
 ## Debug: What Was Wrong
 
@@ -54,13 +47,5 @@ export async function getRequestsByStatus(status: string) {
 ```
 
 ## What I'd Add With More Time
+searching for specific review, able to mass input request via csv file. make the view of everything more userfriendly.
 
-- **Authentication** — Add Supabase Auth so requests are tied to users. Currently it's fully open via the anon key.
-- **Optimistic UI updates** — Use React's `useOptimistic` hook for instant status changes before server confirmation.
-- **Pagination** — Add cursor-based pagination for large request lists.
-- **Search** — Full-text search across client names and ASINs.
-- **Audit log** — Track who changed what and when (status history per request).
-- **E2E tests** — Playwright tests for the full user flow (add, filter, update, duplicate warning).
-- **Toast notifications** — Replace inline success/error messages with a proper toast system.
-- **Loading skeletons** — Add skeleton UI during data fetches for better perceived performance.
-- **Rate limiting** — Prevent abuse of the create endpoint.

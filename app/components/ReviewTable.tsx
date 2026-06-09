@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from 'react'
 import type { ReviewRequest, ReviewStatus } from '@/lib/types'
-import { STATUS_OPTIONS, formatDate, timeAgo } from '@/lib/types'
+import { formatDate, timeAgo } from '@/lib/types'
 import { updateRequestStatus, deleteReviewRequest } from '@/app/actions'
-import StatusBadge from './StatusBadge'
+import StatusStepper from './StatusStepper'
 
 export default function ReviewTable({ requests }: { requests: ReviewRequest[] }) {
   if (requests.length === 0) {
@@ -83,8 +83,6 @@ function ReviewRow({ request, index }: { request: ReviewRequest; index: number }
     })
   }
 
-  const nextStatus = getNextStatus(request.status)
-
   return (
     <tr
       className={`border-b border-white/[0.04] row-highlight ${
@@ -101,7 +99,11 @@ function ReviewRow({ request, index }: { request: ReviewRequest; index: number }
         </code>
       </td>
       <td className="py-3.5 px-4">
-        <StatusBadge status={request.status} />
+        <StatusStepper
+          currentStatus={request.status}
+          onStatusChange={handleStatusChange}
+          disabled={isPending}
+        />
       </td>
       <td className="py-3.5 px-4">
         <div className="text-sm text-zinc-500" title={formatDate(request.created_at)}>
@@ -110,31 +112,6 @@ function ReviewRow({ request, index }: { request: ReviewRequest; index: number }
       </td>
       <td className="py-3.5 px-4">
         <div className="flex items-center justify-end gap-2">
-          {/* Status dropdown */}
-          <select
-            value={request.status}
-            onChange={(e) => handleStatusChange(e.target.value as ReviewStatus)}
-            disabled={isPending}
-            className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-zinc-400 cursor-pointer hover:bg-white/[0.08] hover:border-white/[0.12] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s} className="bg-zinc-900">
-                {s}
-              </option>
-            ))}
-          </select>
-
-          {/* Quick advance button */}
-          {nextStatus && (
-            <button
-              onClick={() => handleStatusChange(nextStatus)}
-              disabled={isPending}
-              title={`Move to ${nextStatus}`}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 hover:bg-indigo-500/20 hover:border-indigo-500/30 transition-all duration-200 cursor-pointer disabled:opacity-50 active:scale-[0.97] whitespace-nowrap"
-            >
-              → {nextStatus}
-            </button>
-          )}
 
           {/* Delete button */}
           {!showDeleteConfirm ? (
@@ -191,8 +168,6 @@ function ReviewCard({ request, index }: { request: ReviewRequest; index: number 
     })
   }
 
-  const nextStatus = getNextStatus(request.status)
-
   return (
     <div
       className={`glass-card p-4 animate-slideUp ${isPending ? 'opacity-40 pointer-events-none' : ''}`}
@@ -203,33 +178,18 @@ function ReviewCard({ request, index }: { request: ReviewRequest; index: number 
           <h3 className="font-medium text-zinc-100 text-sm">{request.client_name}</h3>
           <code className="text-xs text-zinc-500 font-mono">{request.product_asin}</code>
         </div>
-        <StatusBadge status={request.status} />
+        <span className="text-xs text-zinc-600">{timeAgo(request.created_at)}</span>
       </div>
 
       <div className="flex items-center justify-between">
-        <span className="text-xs text-zinc-600">{timeAgo(request.created_at)}</span>
+        <StatusStepper
+          currentStatus={request.status}
+          onStatusChange={handleStatusChange}
+          disabled={isPending}
+          compact
+        />
 
         <div className="flex items-center gap-2">
-          {nextStatus && (
-            <button
-              onClick={() => handleStatusChange(nextStatus)}
-              disabled={isPending}
-              className="px-3 py-1 rounded-lg text-xs font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all cursor-pointer active:scale-[0.97]"
-            >
-              → {nextStatus}
-            </button>
-          )}
-
-          <select
-            value={request.status}
-            onChange={(e) => handleStatusChange(e.target.value as ReviewStatus)}
-            disabled={isPending}
-            className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1 text-xs text-zinc-400 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s} className="bg-zinc-900">{s}</option>
-            ))}
-          </select>
 
           {!showDeleteConfirm ? (
             <button
@@ -263,10 +223,3 @@ function ReviewCard({ request, index }: { request: ReviewRequest; index: number 
   )
 }
 
-function getNextStatus(current: ReviewStatus): ReviewStatus | null {
-  switch (current) {
-    case 'Pending': return 'In Progress'
-    case 'In Progress': return 'Done'
-    default: return null
-  }
-}
