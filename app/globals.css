@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* ============================================
+   Client Review Tracker — Global Styles
+   ============================================ */
+
+@theme inline {
+  --color-background: #09090b;
+  --color-foreground: #fafafa;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+
+  /* Fade-in animation for alerts/messages */
+  --animate-fadeIn: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Smooth scrollbar for dark mode */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Select option styling for dark mode */
+option {
+  background-color: #18181b;
+  color: #e4e4e7;
+}
