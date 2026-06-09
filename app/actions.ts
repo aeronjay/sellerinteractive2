@@ -22,6 +22,9 @@ interface ActionResult {
 /**
  * Check if a duplicate review request exists (same client + same ASIN)
  * that is still active (Pending or In Progress).
+ * 
+ * Uses case-insensitive matching for client_name so "Acme Corp" and
+ * "acme corp" are treated as the same client.
  */
 export async function checkDuplicate(
   clientName: string,
@@ -29,10 +32,12 @@ export async function checkDuplicate(
 ): Promise<ActionResult> {
   const supabase = await createClient()
 
+  // Use .ilike for case-insensitive client_name matching
+  // ASIN is always uppercased before storage, so .eq is fine
   const { data, error } = await supabase
     .from('review_requests')
     .select('id, status, created_at')
-    .eq('client_name', clientName)
+    .ilike('client_name', clientName)
     .eq('product_asin', productAsin.toUpperCase())
     .in('status', ['Pending', 'In Progress'])
     .limit(1)
@@ -46,7 +51,7 @@ export async function checkDuplicate(
       success: true,
       duplicate: {
         id: data[0].id,
-        status: data[0].status,
+        status: data[0].status as ReviewStatus,
         created_at: data[0].created_at,
       },
     }
@@ -58,6 +63,7 @@ export async function checkDuplicate(
 /**
  * Create a new review request.
  * Validates inputs server-side before inserting.
+ * Returns duplicate info if a matching active request exists.
  */
 export async function createReviewRequest(
   clientName: string,
@@ -79,14 +85,17 @@ export async function createReviewRequest(
     }
   }
 
-  // Check for active duplicates unless explicitly skipped
+  // Check for active duplicates unless explicitly skipped by user
   if (!skipDuplicateCheck) {
     const duplicateCheck = await checkDuplicate(trimmedName, trimmedAsin)
     if (!duplicateCheck.success) {
       return duplicateCheck
     }
     if (duplicateCheck.duplicate) {
-      return duplicateCheck // Return duplicate info for the UI to handle
+      // Return duplicate info so the UI can show a warning
+      // Note: success is true because the check itself succeeded —
+      // the presence of .duplicate tells the client to prompt the user
+      return duplicateCheck
     }
   }
 
@@ -112,6 +121,11 @@ export async function updateRequestStatus(
   id: string,
   newStatus: ReviewStatus
 ): Promise<ActionResult> {
+  const validStatuses: ReviewStatus[] = ['Pending', 'In Progress', 'Done']
+  if (!validStatuses.includes(newStatus)) {
+    return { success: false, error: 'Invalid status.' }
+  }
+
   const supabase = await createClient()
 
   const { error } = await supabase
